@@ -1,92 +1,91 @@
+# style.py
 import streamlit as st
 
 def apply_custom_styles():
-    """Aplica la paleta OASIS con fondo verde opaco e inmunidad al modo oscuro"""
-    st.markdown("""
+    """Aplica el diseño Oasis con fondo de huella sutil (watermark)"""
+    
+    # URL DE TU IMAGEN DE HUELLA GRIS PÁLIDO Y TRANSPARENTE
+    # Ejemplo: URL_HUELLA_SUTIL = "https://tu-hosting.com/huella_gris.png"
+    URL_HUELLA_SUTIL = "TU_URL_DE_HUELLA_SUTIL.png" 
+    
+    st.markdown(f"""
         <style>
-        /* 1. Forzar fondo verde opaco (Oasis Bone) y color de texto base */
-        /* Aplicamos a múltiples niveles para evitar que el modo oscuro lo rompa */
-        html, body, [data-testid="stAppViewContainer"], .stApp {
-            background-color: #F4F7F0 !important; /* El verde opaco exacto */
-            color: #2D3436 !important;
-        }
+        /* 1. Fondo de Marca de Agua: Huella sutil y repetida al fondo */
+        [data-testid="stAppViewContainer"] {{
+            background-image: url('{URL_HUELLA_SUTIL}') !important;
+            background-repeat: repeat !important; /* Mosaico sutil */
+            background-size: 150px !important;    /* Tamaño de la huella */
+            background-attachment: fixed !important;
+        }}
+        
+        /* Capa de suavizado para que el fondo sea Oasis Bone y no canse la vista */
+        [data-testid="stAppViewContainer"]::before {{
+            content: "";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(244, 247, 240, 0.9); /* Verde-Gris Oasis casi opaco */
+            z-index: -1;
+        }}
 
-        /* 2. Cabecera blanca para que resalte (igual que la app Oasis) */
-        .header-box {
-            background-color: #FFFFFF !important;
-            padding: 35px;
-            border-radius: 32px;
-            box-shadow: 0 8px 30px rgba(149, 192, 106, 0.1);
-            margin-bottom: 30px;
+        /* 2. Tarjetas Blancas Súper Redondeadas (Para que resalten del fondo) */
+        .header-box {{
+            background-color: white;
+            padding: 30px;
+            border-radius: 30px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.03);
+            margin-bottom: 25px;
             border: 1px solid #E9EDDF;
             text-align: center;
-        }
+        }}
 
-        /* 3. Tarjetas de métricas blancas con texto en gris oscuro y verde */
-        div[data-testid="stMetric"] {
-            background-color: #FFFFFF !important;
-            border-radius: 28px !important;
-            padding: 25px !important;
+        div[data-testid="stMetric"] {{
+            background-color: white !important;
+            border-radius: 25px !important;
+            padding: 20px !important;
             border: 1px solid #E9EDDF !important;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.02) !important;
-        }
-
-        /* Títulos de métricas en gris oscuro para que se distingan bien */
-        div[data-testid="stMetricLabel"] > div > p {
-            color: #4A4E4D !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02) !important;
+        }}
+        
+        /* Títulos de Métricas en Gris Oscuro OASIS */
+        div[data-testid="stMetricLabel"] > div > p {{
+            color: #2D3436 !important;
             font-weight: 600 !important;
-            font-size: 0.85rem !important;
-            text-transform: uppercase;
-        }
+        }}
 
-        /* Números en verde Oasis */
-        div[data-testid="stMetricValue"] > div {
-            color: #95C06A !important;
-            font-weight: 700 !important;
-        }
-
-        /* 4. Tabs Estilo Pastilla (Inmunes al modo oscuro) */
+        /* 3. Pestañas (Tabs) Estilo Cápsula (Drink tracker style) */
         .stTabs [data-baseweb="tab-list"] {
             gap: 12px !important;
-            background-color: transparent !important;
         }
 
         .stTabs [data-baseweb="tab"] {
-            background-color: #E9EDDF !important;
-            border-radius: 50px !important; /* Más redondeado como el botón Drink */
+            background-color: rgba(255, 255, 255, 0.8) !important;
+            border-radius: 50px !important;
             color: #636E72 !important;
-            border: none !important;
+            border: 1px solid #E9EDDF !important;
             padding: 8px 25px !important;
-            transition: all 0.3s ease;
         }
 
         .stTabs [data-baseweb="tab"][aria-selected="true"] {
             background-color: #95C06A !important;
-            color: #FFFFFF !important;
+            color: white !important;
         }
 
-        /* 5. Asegurar que las tablas sean legibles sobre el fondo claro */
-        .stDataFrame, div[data-testid="stTable"] {
-            background-color: #FFFFFF !important;
+        /* 4. Asegurar legibilidad en Dataframes */
+        [data-testid="stDataFrame"], .stDataFrame {
+            background-color: white !important;
             border-radius: 20px !important;
             padding: 10px;
-        }
-
-        /* 6. Forzar color de otros textos secundarios */
-        p, span, h1, h2, h3 {
-            color: #2D3436 !important;
         }
         </style>
         """, unsafe_allow_html=True)
 
 def render_header(user_name):
+    """Banner principal minimalista"""
     st.markdown(f"""
         <div class="header-box">
-            <h1 style='margin:0; color:#2D3436 !important; font-size: 1.7rem;'>
-                OASIS <span style='color:#95C06A !important;'>PET TRACKER</span>
+            <h1 style='margin:0; color:#2D3436; font-size: 1.8rem; font-weight:700;'>
+                🐾 OASIS <span style='color:#95C06A; font-weight: 300;'>PET TRACKER</span>
             </h1>
-            <p style='color:#636E72 !important; margin-top:5px;'>
-                Análisis de Inventario • {user_name}
-            </p>
+            <p style='color:#636E72;'>Bienvenido | Sesión: <b>{user_name}</b></p>
         </div>
         """, unsafe_allow_html=True)
