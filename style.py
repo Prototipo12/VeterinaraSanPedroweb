@@ -6,7 +6,7 @@ def apply_custom_styles():
     
     # URL DE TU IMAGEN DE HUELLA GRIS PÁLIDO Y TRANSPARENTE
     # Ejemplo: URL_HUELLA_SUTIL = "https://tu-hosting.com/huella_gris.png"
-    URL_HUELLA_SUTIL = "TU_URL_DE_HUELLA_SUTIL.png" 
+    URL_HUELLA_SUTIL = "URL_HUELLA = "https://raw.githubusercontent.com/Prototipo12bs/VeterinaraSPweb/main/huella.png"" 
     
     st.markdown(f"""
         <style>
