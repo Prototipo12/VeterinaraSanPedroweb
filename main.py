@@ -1,34 +1,36 @@
 import streamlit as st
 import plotly.express as px
 from datetime import datetime
+import pandas as pd
+import numpy as np
 import logic 
 import style
-import pandas as pd
 
-# 1. Configuración de página y estilos
-st.set_page_config(page_title="Veterinaria SP", layout="wide", page_icon="🐾")
+# Confi inicial
+st.set_page_config(page_title="Veterinaria SP - Dashboard", layout="wide", page_icon="🐾")
+
+# estilos globales
 style.apply_custom_styles()
 
-# --- LÓGICA DE SESIÓN Y MULTICUENTAS ---
+# Gestion en login
 if 'auth' not in st.session_state: 
     st.session_state.auth = False
-    st.session_state.role = None 
+    st.session_state.role = None
 
+# Autenticacion
 if not st.session_state.auth:
     with st.sidebar:
-        st.markdown("### 🔐 Acceso Veterinaria SP")
+        st.markdown("### 🔐 Acceso al Sistema")
         u = st.text_input("Usuario")
         p = st.text_input("Clave", type="password")
         
         if st.button("Ingresar", use_container_width=True):
-            # CUENTA 1: Administrador (Acceso total)
-            if u == "saravialeyva234@gmail.com" and p == "admin2026":
+            if u == "HYGvets" and p == "adminVet1":
                 st.session_state.auth = True
                 st.session_state.user = u
                 st.session_state.role = "admin"
                 st.rerun()
-            # CUENTA 2: Estudiante (Restringido)
-            elif u == "estudiante@upc.edu.pe" and p == "upc2026":
+            elif u == "prac20" and p == "practicante2026":
                 st.session_state.auth = True
                 st.session_state.user = u
                 st.session_state.role = "estudiante"
@@ -36,121 +38,158 @@ if not st.session_state.auth:
             else:
                 st.error("Credenciales incorrectas")
 else:
-    # --- 2. CONFIGURACIÓN DE URLS (CORREGIDAS) ---
     URL_MOVIMIENTOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQatK31NMjLR7cXk3RejqLRdDV5Q7-GaGZ7c8_l79nIL_OoacChSSOTQ-ONAFNuKS1l9Lu2CXE25WXc/pub?gid=0&single=true&output=csv"
-    # URL Limpia sin caracteres de control
     URL_PRODUCTOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQatK31NMjLR7cXk3RejqLRdDV5Q7-GaGZ7c8_l79nIL_OoacChSSOTQ-ONAFNuKS1l9Lu2CXE25WXc/pub?gid=2137172440&single=true&output=csv"
-    
+
     try:
         data_movimientos = logic.load_data(URL_MOVIMIENTOS)
         ventas_totales = logic.get_ventas_analisis(data_movimientos)
         ahora = datetime.now()
         ventas_mes = ventas_totales[ventas_totales['Fecha'].dt.month == ahora.month]
-        
         resumen_stock = pd.read_csv(URL_PRODUCTOS)
         resumen_stock = resumen_stock.rename(columns={'Stock_Actual': 'Cantidad'})
 
-        # --- 3. CABECERA ---
-        st.markdown(f"""
-            <div style='text-align: center; padding: 20px;'>
-                <h1 style='color: #1B5E20; margin-bottom: 0; font-family: sans-serif;'>VETERINARIA SP</h1>
-                <p style='color: #666;'>Gestión Profesional de Inventario • {st.session_state.user}</p>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        # --- 4. TABS ---
-        tab1, tab2, tab3, tab4 = st.tabs(["📊 Resumen", "🏷️ Análisis", "📅 Tendencias", "📦 Inventario"])
-
-        with tab1:
-            st.markdown("<br>", unsafe_allow_html=True)
-            col1, col2, col3 = st.columns(3)
+        # --- BARRA LATERAL (SIDEBAR) REORGANIZADA CON ESPACIADO ---
+        with st.sidebar:
+            # 1. Título bien arriba
+            style.render_header(st.session_state.user)
             
-            with col1:
-                if st.session_state.role == "admin":
-                    st.metric(label="INGRESOS DEL MES", value=f"S/ {ventas_mes['Monto'].sum():,.2f}")
-                else:
-                    st.metric(label="INGRESOS DEL MES", value="🔒 Restringido")
-                    
-            with col2:
-                if st.session_state.role == "admin":
-                    valor_neto = (resumen_stock['Cantidad'] * resumen_stock['Precio']).sum()
-                    st.metric(label="VALOR ALMACÉN", value=f"S/ {valor_neto:,.2f}")
-                else:
-                    st.metric(label="VALOR ALMACÉN", value="🔒 Restringido")
-                    
-            with col3:
-                st.metric(label="STOCK CRÍTICO", value=len(resumen_stock[resumen_stock['Cantidad'] < 5]))
+            # Espaciado extra
+            st.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
+            
+            # 2. Bloque de Sesión con margen inferior para separar de los tabs
+            st.markdown(f"""
+                <div class="sidebar-status" style='margin-bottom: 30px;'>
+                    <p style='margin:0; font-size:0.85rem; color:#2D3436; font-weight:bold;'>👤 {st.session_state.user}</p>
+                    <p style='margin:0; font-size:0.75rem; color:#636E72;'>ROL: {st.session_state.role.upper()}</p>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            # 3. Navegación
+            opcion_menu = st.radio(
+                "Navegación",
+                options=["📊 Resumen General", "🏷️ Inteligencia de Ventas", "📅 Tendencias Históricas", "📦 Inventario"],
+                label_visibility="collapsed"
+            )
+            
+            # Espaciado flexible para empujar el botón al final
+            st.markdown("<div style='margin-top: 50px;'></div>", unsafe_allow_html=True)
+            
+            # 4. Cerrar sesión
+            if st.button("🚪 Cerrar Sesión", use_container_width=True):
+                st.session_state.clear()
+                st.rerun()
 
-            st.markdown("<br>", unsafe_allow_html=True)
-            c_left, c_right = st.columns([2, 1])
-            with c_left:
-                st.markdown("<p style='color:#888; font-size:0.9rem; font-weight:600;'>🔥 TOP VENTAS HISTÓRICO</p>", unsafe_allow_html=True)
-                top4 = ventas_totales.groupby('Nombre')['Cantidad'].sum().abs().nlargest(4).reset_index()
-                fig_top = px.bar(top4, x='Nombre', y='Cantidad', color_discrete_sequence=["#94DD4C"], text_auto=True, template='plotly_white')
-                st.plotly_chart(fig_top, use_container_width=True)
-            with c_right:
-                st.markdown("<p style='color:#888; font-size:0.9rem; font-weight:600;'>⚠️ Bajo en stock</p>", unsafe_allow_html=True)
+        # --- LÓGICA DE CONTENIDO ---
+        if opcion_menu == "📊 Resumen General":
+            st.markdown("### 📊 Resumen General")
+            
+            # Filtros Mes/Año
+            anios = sorted(ventas_totales['Fecha'].dt.year.unique(), reverse=True)
+            col_f1, col_f2 = st.columns(2)
+            with col_f1: anio_sel = st.selectbox("Seleccionar Año:", anios)
+            with col_f2: 
+                meses_disp = sorted(ventas_totales[ventas_totales['Fecha'].dt.year == anio_sel]['Fecha'].dt.month.unique())
+                mes_sel = st.selectbox("Seleccionar Mes:", meses_disp, format_func=lambda x: pd.to_datetime(x, format='%m').strftime('%B'))
+            
+            datos = ventas_totales[(ventas_totales['Fecha'].dt.year == anio_sel) & (ventas_totales['Fecha'].dt.month == mes_sel)]
+            
+            # Métricas
+            col1, col2, col3 = st.columns(3)
+            col1.metric(f"INGRESOS {pd.to_datetime(mes_sel, format='%m').strftime('%B').upper()}", f"S/ {datos['Monto'].sum():,.2f}" if st.session_state.role == "admin" else "🔒")
+            col2.metric("VALOR ALMACÉN", f"S/ {(resumen_stock['Cantidad'] * resumen_stock['Precio']).sum():,.2f}")
+            col3.metric("PRODUCTOS CRÍTICOS", len(resumen_stock[resumen_stock['Cantidad'] < 5]))
+
+            # Gráfico y Tabla
+            c1, c2 = st.columns([2, 1])
+            with c1:
+                st.markdown(f"**🔥 TOP PRODUCTOS EN {pd.to_datetime(mes_sel, format='%m').strftime('%B').upper()}**")
+                top = np.abs(datos.groupby('Nombre')['Cantidad'].sum()).nlargest(4).reset_index()
+                fig = px.bar(top, x='Nombre', y='Cantidad', color='Cantidad', color_continuous_scale='Greens', text_auto=True)
+                fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+                st.plotly_chart(fig, use_container_width=True)
+            with c2:
+                st.markdown("**⚠️ REPOSICIÓN**")
                 st.dataframe(resumen_stock[resumen_stock['Cantidad'] < 5][['Nombre', 'Cantidad']], use_container_width=True, hide_index=True)
 
-        with tab2:
-             st.markdown("<br>", unsafe_allow_html=True)
-             c1, c2 = st.columns(2)
-             with c1:
-                # El estudiante ve el gráfico basado en Cantidad, el Admin en Valor Monetario
-                valor_col = 'Valor_Neto' if st.session_state.role == "admin" else 'Cantidad'
-                if st.session_state.role == "admin":
-                    resumen_stock['Valor_Neto'] = resumen_stock['Cantidad'] * resumen_stock['Precio']
-                
-                fig_pie = px.pie(resumen_stock, values=valor_col, names='Categoria', hole=0.7, 
-                                 title=f"Distribución por {valor_col}",
-                                 color_discrete_sequence=['#95C06A', '#BDD9A2', '#DEE9CD'], template="plotly_white")
-                st.plotly_chart(fig_pie, use_container_width=True)
-             with c2:
-                ventas_cat = ventas_totales.groupby('Categoria')['Cantidad'].sum().abs().reset_index()
-                fig_bar = px.bar(ventas_cat, x='Categoria', y='Cantidad', color_discrete_sequence=['#BDD9A2'], template="plotly_white")
-                st.plotly_chart(fig_bar, use_container_width=True)
+        elif opcion_menu == "🏷️ Inteligencia de Ventas":
+            st.markdown("### 🔍 Inteligencia de Datos")
+            c_f1, c_f2 = st.columns(2)
+            with c_f1:
+                cat_ana = st.multiselect("Categorías:", options=resumen_stock['Categoria'].unique(), default=resumen_stock['Categoria'].unique())
+            with c_f2:
+                prods_disponibles = resumen_stock[resumen_stock['Categoria'].isin(cat_ana)]['Nombre'].unique()
+                prod_ana = st.multiselect("Productos específicos:", options=prods_disponibles, default=None)
 
-        with tab3:
-            st.markdown("<br>", unsafe_allow_html=True)
+            df_v_f = ventas_totales[ventas_totales['Categoria'].isin(cat_ana)].copy()
+            if prod_ana:
+                df_v_f = df_v_f[df_v_f['Nombre'].isin(prod_ana)]
+
+            if not df_v_f.empty:
+                m1, m2, m3, m4 = st.columns(4)
+                m1.metric("Unidades Vendidas", f"{np.abs(df_v_f['Cantidad'].sum()):,.0f}")
+                if st.session_state.role == "admin":
+                    m2.metric("Ingreso Total", f"S/ {df_v_f['Monto'].sum():,.2f}")
+                    m3.metric("Ticket Promedio", f"S/ {(df_v_f['Monto'].sum()/len(df_v_f)):,.2f}")
+                ventas_mensuales = np.abs(df_v_f.groupby(df_v_f['Fecha'].dt.to_period('M'))['Cantidad'].sum())
+                prediccion = ventas_mensuales.mean() if not ventas_mensuales.empty else 0
+                m4.metric("Predicción Próx. Mes", f"~{prediccion:,.0f} und")
+
+                st.markdown("---")
+                g1, g2 = st.columns(2)
+                with g1:
+                    df_pie = df_v_f.groupby('Categoria')['Cantidad'].sum().abs().reset_index()
+                    fig_pie_v = px.pie(df_pie, values='Cantidad', names='Categoria', hole=0.4, title="Mix de Ventas (Porcentaje)")
+                    fig_pie_v.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+                    st.plotly_chart(fig_pie_v, use_container_width=True)
+                with g2:
+                    top_prod_filtro = df_v_f.groupby('Nombre')['Cantidad'].sum().abs().nlargest(10).reset_index()
+                    fig_bar_v = px.bar(top_prod_filtro, x='Cantidad', y='Nombre', orientation='h', title="Top 10 en selección", color='Cantidad', color_continuous_scale='Greens')
+                    fig_bar_v.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+                    st.plotly_chart(fig_bar_v, use_container_width=True)
+            else:
+                st.warning("Selecciona criterios para ver el análisis.")
+
+        elif opcion_menu == "📅 Tendencias Históricas":
+            st.markdown("### 📅 Tendencias Históricas")
             pivot = logic.get_pivot_estacionalidad(ventas_totales)
             if not pivot.empty:
-                prod_sel = st.selectbox("Seleccionar item para ver evolución mensual:", pivot.index)
+                prod_sel = st.selectbox("Comportamiento mensual de:", pivot.index)
                 datos_p = pivot.loc[prod_sel].reset_index()
                 datos_p.columns = ['Mes', 'Ventas']
-                fig_est = px.line(datos_p, x='Mes', y='Ventas', markers=True, color_discrete_sequence=['#95C06A'], template='plotly_white')
+                fig_est = px.line(datos_p, x='Mes', y='Ventas', markers=True, title=f"Histórico: {prod_sel}")
+                fig_est.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
                 st.plotly_chart(fig_est, use_container_width=True)
 
-        # --- TAB 4: INVENTARIO BÚSQUEDA REAL-TIME ---
-        with tab4:
-            st.markdown("<br>", unsafe_allow_html=True)
-            busqueda = st.text_input("🔍 Filtrar por nombre...", placeholder="Escribe para buscar...", key="main_search")
+        elif opcion_menu == "📦 Inventario":
+            st.markdown("### 📦 Gestión de Stock - OASIS Pet Tracker")
+            busqueda_texto = st.text_input("🔍 Buscar producto por nombre:", placeholder="Escribe el nombre del producto...", key="main_search_v10")
+            st.markdown("---")
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                categorias = ["Todas"] + sorted(resumen_stock['Categoria'].unique().tolist())
+                cat_sel = st.selectbox("Categoría", categorias, key="cat_drop_final")
+            with c2:
+                ord_stock = st.selectbox("Orden Stock", ["Sin orden", "Menor a Mayor", "Mayor a Menor"], key="stock_drop_final")
+            with c3:
+                ord_price = st.selectbox("Orden Precio", ["Sin orden", "Menor a Mayor", "Mayor a Menor"], key="price_drop_final")
 
-            f1, f2, f3 = st.columns(3)
-            with f1:
-                cat_sel = st.selectbox("Categoría", ["Todas"] + sorted(resumen_stock['Categoria'].unique().tolist()))
-            with f2:
-                orden_p = st.selectbox("Precio", ["Sin orden", "Menor a Mayor", "Mayor a Menor"])
-            with f3:
-                orden_s = st.selectbox("Stock", ["Sin orden", "Menor a Mayor", "Mayor a Menor"])
-
-            df_filtered = resumen_stock.copy()
-            if busqueda:
-                df_filtered = df_filtered[df_filtered['Nombre'].str.contains(busqueda, case=False, na=False)]
+            df_inv = resumen_stock.copy()
+            if busqueda_texto:
+                df_inv = df_inv[df_inv['Nombre'].str.contains(busqueda_texto, case=False, na=False)]
             if cat_sel != "Todas":
-                df_filtered = df_filtered[df_filtered['Categoria'] == cat_sel]
+                df_inv = df_inv[df_inv['Categoria'] == cat_sel]
+            if ord_stock == "Menor a Mayor":
+                df_inv = df_inv.sort_values('Cantidad', ascending=True)
+            elif ord_stock == "Mayor a Menor":
+                df_inv = df_inv.sort_values('Cantidad', ascending=False)
+            if ord_price == "Menor a Mayor":
+                df_inv = df_inv.sort_values('Precio', ascending=True)
+            elif ord_price == "Mayor a Menor":
+                df_inv = df_inv.sort_values('Precio', ascending=False)
 
-            # Lógica de Orden
-            if orden_p == "Menor a Mayor": df_filtered = df_filtered.sort_values('Precio', ascending=True)
-            elif orden_p == "Mayor a Menor": df_filtered = df_filtered.sort_values('Precio', ascending=False)
-            if orden_s == "Menor a Mayor": df_filtered = df_filtered.sort_values('Cantidad', ascending=True)
-            elif orden_s == "Mayor a Menor": df_filtered = df_filtered.sort_values('Cantidad', ascending=False)
-
-            # Definir columnas visibles según ROL
-            cols = ['Nombre', 'Categoria', 'Cantidad']
-            if st.session_state.role == "admin":
-                cols.insert(2, 'Precio')
-
-            st.dataframe(df_filtered[cols], use_container_width=True, hide_index=True)
-
+            st.dataframe(df_inv[['Nombre', 'Categoria', 'Precio', 'Cantidad']], use_container_width=True, hide_index=True, column_config={"Precio": st.column_config.NumberColumn("Precio (S/)", format="S/ %.2f"), "Cantidad": st.column_config.NumberColumn("Stock", format="%d und.")})
+            st.caption(f"Mostrando {len(df_inv)} productos en inventario.")
+            
     except Exception as e:
         st.error(f"Error de conexión: {e}")

@@ -1,92 +1,91 @@
 import streamlit as st
+import base64
+
+def get_base64_image(image_path):
+    with open(image_path, "rb") as img_file:
+        return base64.b64encode(img_file.read()).decode()
 
 def apply_custom_styles():
-    """Aplica la paleta de colores con fondo verde opaco e inmunidad al modo oscuro"""
-    st.markdown("""
+    try:
+        img_base64 = get_base64_image("assets/images/animales.png")
+        background_style = f"""
+            background-image: url("data:image/png;base64,{img_base64}");
+            background-size: 500px !important;
+            background-position: top left;
+            background-repeat: repeat !important;
+            background-attachment: fixed;
+        """
+    except FileNotFoundError:
+        background_style = "background-color: #F4F7F0 !important;"
+
+    st.markdown(f"""
         <style>
-        /* 1. Forzar fondo verde opaco y color de texto base */
-        /* Aplicamos a múltiples niveles para evitar que el modo oscuro lo rompa */
-        html, body, [data-testid="stAppViewContainer"], .stApp {
-            background-color: #F4F7F0 !important; /* El verde opaco exacto */
-            color: #2D3436 !important;
-        }
+        /* Fondo general */
+        html, body, [data-testid="stAppViewContainer"], .stApp {{ {background_style} color: #2D3436 !important; }}
+        
+        /* Estilos de Gráficos y Métricas */
+        div[data-testid="stMetric"], .stDataFrame, div[data-testid="stTable"], div[class*="stPlotlyChart"] {{
+            background-color: #F4F7F0 !important;
+            border-radius: 15px !important;
+            padding: 15px !important;
+            border: 2px solid #E9EDDF !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02) !important;
+        }}
 
-        /* 2. Cabecera blanca para que resalte (igual que la app Oasis) */
-        .header-box {
-            background-color: #FFFFFF !important;
-            padding: 35px;
-            border-radius: 32px;
-            box-shadow: 0 8px 30px rgba(149, 192, 106, 0.1);
-            margin-bottom: 30px;
-            border: 1px solid #E9EDDF;
-            text-align: center;
-        }
+        /* Títulos internos */
+        .stApp h1, .stApp h2, .stApp h3, [data-testid="stMarkdownContainer"] h1 {{
+            color: #3A4A02 !important; font-size: 32px !important; font-weight: 900 !important;
+        }}
 
-        /* 3. Tarjetas de métricas blancas con texto en gris oscuro y verde */
-        div[data-testid="stMetric"] {
-            background-color: #FFFFFF !important;
-            border-radius: 28px !important;
-            padding: 25px !important;
-            border: 1px solid #E9EDDF !important;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.02) !important;
-        }
+        /* --- BARRA LATERAL (SIDEBAR) CORREGIDA --- */
+        [data-testid="stSidebar"] {{ 
+            background-color: #F8F9F7 !important; 
+            border-right: 1px solid #E9EDDF !important;
+            padding-top: 10px !important;
+        }}
+        
+        /* Eliminación de la caja de usuario */
+        .sidebar-user-info {{ 
+            padding: 10px 20px !important; 
+            margin-bottom: 30px !important; 
+            border-bottom: 1px solid #E9EDDF !important;
+        }}
 
-        /* Títulos de métricas en gris oscuro para que se distingan bien */
-        div[data-testid="stMetricLabel"] > div > p {
-            color: #4A4E4D !important;
-            font-weight: 600 !important;
-            font-size: 0.85rem !important;
-            text-transform: uppercase;
-        }
+        /* SEPARACIÓN DE TABS (Forzando 50px de espacio vertical) */
+        div[data-testid="stSidebar"] div[role="radiogroup"] {{
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 50px !important; /* Espacio real entre tabs */
+            margin-top: 30px !important;
+        }}
 
-        /* Números en verde Oasis */
-        div[data-testid="stMetricValue"] > div {
-            color: #95C06A !important;
-            font-weight: 700 !important;
-        }
-
-        /* 4. Tabs Estilo Pastilla (Inmunes al modo oscuro) */
-        .stTabs [data-baseweb="tab-list"] {
-            gap: 12px !important;
-            background-color: transparent !important;
-        }
-
-        .stTabs [data-baseweb="tab"] {
-            background-color: #E9EDDF !important;
-            border-radius: 50px !important; /* Más redondeado como el botón Drink */
-            color: #636E72 !important;
-            border: none !important;
-            padding: 8px 25px !important;
-            transition: all 0.3s ease;
-        }
-
-        .stTabs [data-baseweb="tab"][aria-selected="true"] {
-            background-color: #95C06A !important;
-            color: #FFFFFF !important;
-        }
-
-        /* 5. Asegurar que las tablas sean legibles sobre el fondo claro */
-        .stDataFrame, div[data-testid="stTable"] {
-            background-color: #FFFFFF !important;
-            border-radius: 20px !important;
-            padding: 10px;
-        }
-
-        /* 6. Forzar color de otros textos secundarios */
-        p, span, h1, h2, h3 {
-            color: #2D3436 !important;
-        }
+        div[data-testid="stSidebar"] div[role="radiogroup"] label {{ 
+            background-color: transparent !important; 
+            border: none !important; 
+            margin: 0px !important; 
+            padding: 0 !important; 
+        }}
+        
+        div[data-testid="stSidebar"] div[role="radiogroup"] label p {{ 
+            color: #4A4E4D !important; 
+            font-size: 18px !important; 
+            font-weight: 600 !important; 
+        }}
+        
+        div[data-testid="stSidebar"] div[role="radiogroup"] label[aria-checked="true"] p {{ 
+            color: #5D7503 !important; 
+            font-weight: 900 !important; 
+        }}
+        
+        div[data-testid="stSidebar"] div[role="radiogroup"] label[aria-checked="true"]::before {{ 
+            content: "•"; color: #5D7503; margin-right: 15px; font-weight: bold; font-size: 20px;
+        }}
         </style>
-        """, unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
 def render_header(user_name):
     st.markdown(f"""
-        <div class="header-box">
-            <h1 style='margin:0; color:#2D3436 !important; font-size: 1.7rem;'>
-                OASIS <span style='color:#95C06A !important;'>PET TRACKER</span>
-            </h1>
-            <p style='color:#636E72 !important; margin-top:5px;'>
-                Análisis de Inventario • {user_name}
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
+    <div style="text-align: center; padding: 0 10px 10px 10px;">
+        <h1 style="color: #5D7503; font-size: 24px; font-weight: 900; margin: 0;">Veterinaria SP</h1>
+    </div>
+    """, unsafe_allow_html=True)
