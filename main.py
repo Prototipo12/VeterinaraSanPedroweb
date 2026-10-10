@@ -12,12 +12,21 @@ st.set_page_config(page_title="Veterinaria SP - Dashboard", layout="wide", page_
 # estilos globales
 style.apply_custom_styles()
 
-# Gestion en login
+# GESTIÓN DE USUARIOS Y LOGIN
+if 'gestor_usuarios' not in st.session_state:
+    URL_USUARIOS ="https://docs.google.com/spreadsheets/d/e/2PACX-1vRYmx2M-sIcwLVAqdCNI9ajJlVp03KJoccMTa7xJvt3A2DST47NuYgHAmBbQRPfFqtkQnjQr22rBXsN/pub?gid=0&single=true&output=csv"
+    URL_APPS_SCRIPT_USERS="https://script.google.com/macros/s/AKfycbybyLkq6mIktn458_oPOjNUY2YI5FsVEj3LpvuTrTpc4ft-201hrmN_qos5rfGNU-Ny/exec"
+    st.session_state.gestor_usuarios = logic.GestorUsuarios(
+        url_usuarios_sheets=URL_USUARIOS, 
+        url_apps_script=URL_APPS_SCRIPT_USERS
+    )
+
 if 'auth' not in st.session_state: 
     st.session_state.auth = False
     st.session_state.role = None
+    st.session_state.user = None
 
-# Autenticacion
+# Autenticación dinámica usando la clase GestorUsuarios
 if not st.session_state.auth:
     with st.sidebar:
         st.markdown("### 🔐 Acceso al Sistema")
@@ -25,15 +34,12 @@ if not st.session_state.auth:
         p = st.text_input("Clave", type="password")
         
         if st.button("Ingresar", use_container_width=True):
-            if u == "HYGvets" and p == "adminVet1":
+            # Llamamos al método de autenticación de la clase GestorUsuarios
+            rol_encontrado = st.session_state.gestor_usuarios.autenticar(u, p)
+            if rol_encontrado:
                 st.session_state.auth = True
                 st.session_state.user = u
-                st.session_state.role = "admin"
-                st.rerun()
-            elif u == "prac20" and p == "practicante2026":
-                st.session_state.auth = True
-                st.session_state.user = u
-                st.session_state.role = "estudiante"
+                st.session_state.role = rol_encontrado
                 st.rerun()
             else:
                 st.error("Credenciales incorrectas")
@@ -49,22 +55,36 @@ else:
         resumen_stock = pd.read_csv(URL_PRODUCTOS)
         resumen_stock = resumen_stock.rename(columns={'Stock_Actual': 'Cantidad'})
 
-        # --- BARRA LATERAL (SIDEBAR) REORGANIZADA CON ESPACIADO ---
+        # BARRA LATERAL (SIDEBAR) REORGANIZADA CON ESPACIADO
         with st.sidebar:
             # 1. Título bien arriba
             style.render_header(st.session_state.user)
             
             # Espaciado extra
-            st.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
+            st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
             
-            # 2. Bloque de Sesión con margen inferior para separar de los tabs
+            # 2. Bloque de Sesión con margen inferior
             st.markdown(f"""
-                <div class="sidebar-status" style='margin-bottom: 30px;'>
+                <div class="sidebar-status" style='margin-bottom: 20px;'>
                     <p style='margin:0; font-size:0.85rem; color:#2D3436; font-weight:bold;'>👤 {st.session_state.user}</p>
                     <p style='margin:0; font-size:0.75rem; color:#636E72;'>ROL: {st.session_state.role.upper()}</p>
                 </div>
             """, unsafe_allow_html=True)
             
+            # PANEL DE ADMINISTRACIÓN: REGISTRO DINÁMICO DE PRACTICANTES
+            # Solo visible si el rol actual es administrador (Gerente)
+            if st.session_state.role == "admin":
+                with st.expander("👥 Registrar Nuevo Practicante"):
+                    nuevo_user = st.text_input("Usuario Practicante", key="new_user_input")
+                    nuevo_pass = st.text_input("Clave Inicial", type="password", key="new_pass_input")
+                    if st.button("Crear Cuenta", use_container_width=True):
+                        try:
+                            st.session_state.gestor_usuarios.registrar_practicante(nuevo_user, nuevo_pass)
+                            st.success(f"¡Cuenta '{nuevo_user}' creada con éxito!")
+                        except Exception as err:
+                            st.error(f"{err}")
+                st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+
             # 3. Navegación
             opcion_menu = st.radio(
                 "Navegación",
@@ -73,14 +93,14 @@ else:
             )
             
             # Espaciado flexible para empujar el botón al final
-            st.markdown("<div style='margin-top: 50px;'></div>", unsafe_allow_html=True)
+            st.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
             
             # 4. Cerrar sesión
             if st.button("🚪 Cerrar Sesión", use_container_width=True):
                 st.session_state.clear()
                 st.rerun()
 
-        # --- LÓGICA DE CONTENIDO ---
+        # LÓGICA DE CONTENIDO
         if opcion_menu == "📊 Resumen General":
             st.markdown("### 📊 Resumen General")
             
