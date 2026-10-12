@@ -27,7 +27,7 @@ class Usuario:
         self.role = str(role).strip().lower() # 'admin' o 'estudiante'
 
     def verificar_credenciales(self, user, pwd):
-        return self.username == str(user).strip().lower() and self.password == str(pwd).strip()
+        return self.username == str(user).strip().lower() and self.password == str(pwd).strip()#dverifica lso credenciales segun el app scrip
 
 
 class GestorUsuarios:
