@@ -1,14 +1,14 @@
-import pandas as pd  #ENCARGADO DE LA MANIPULACION Y ANALISIS DE DATOS EN TABLAS
-import streamlit as st  #INTERACTUA CON LA INTERFAZ GRAFICA DE USUARIO
-import datetime  #ENCARGADO DE MANEJAR FECHAS Y HORAS
-import numpy as np  #LIBRERIA PARA CALCULOS NUMERICOS Y OPERACIONES MATEMATICAS 
-import requests  #PERMITE HACER PETICIONES HTTP DESDE PYTHON HACIA INTERNET
-import json  #SIRVE PARA EMPAQUETAR DATOS EN FORMATO JSON 
+import pandas as pd #ENCARGADO DE LA MANIPULACION Y ANALISIS DE DATOS EN TABLAS
+import streamlit as st #INTERACTUA CON LA INTERFAZ GRAFICA DE USUARIO
+import datetime #ENCARGADO DE MANEJAR FECHAS Y HORAS
+import numpy as np #LIBRERIA PARA CALCULOS NUMERICOS Y OPERACIONES MATEMATICAS
+import requests #PERMITE HACER PETICIONES HTTP DESDE PYTHON HACIA INTERNET
+import json #SIRVE PARA EMPAQUETAR DATOS EN FORMATO JSON 
 
 
-# 1. EXCEPCIONES PERSONALIZADAS (Excepciones)
+# EXCEPCIONES PERSONALIZADAS (Excepciones)
 
-class ErrorDatoInvalido(Exception):  #CREA UNA NUEVA CLASE ERROR HEREDANDO DE LA CLASE BASE EXCEPTION DE PYTHON
+class ErrorDatoInvalido(Exception): #CREA UNA NUEVA CLASE ERROR HEREDANDO DE LA CLASE BASE EXCEPTION DE PYTHON
     """Excepción lanzada cuando los datos de entrada no son válidos."""
     pass
 
@@ -22,61 +22,68 @@ class Usuario:
     """Clase base para representar a un usuario del sistema."""
     def __init__(self, id_usuario, username, password, role): #CONSTRUCTOR DE LA CLASE
         self.id_usuario = int(id_usuario) #CONVIERTE A UN NUMERO ENTERO
-        self.username = str(username).strip().lower() #CONVIERTE EL NOMBRE A TEXTO QUITANDO LOS ESPACIOS VACIOS Y EN MINUSCULA
-        self.password = str(password).strip()  #ALMACENA LA CONTRASEÑA LIMPIA
+        self.username = str(username).strip().lower() #CONVIERTE EL NOMBRE A TEXTO QUITANDO LOS ESPACIOS VACIOS Y EN MINUSCUL
+        self.password = str(password).strip() #ALMACENA LA CONTRASEÑA LIMPIA
         self.role = str(role).strip().lower() # 'admin' o 'estudiante'
 
-    def verificar_credenciales(self, user, pwd):  #COMPARA LOS DATOS INGRESADOS EN EL FORMULARIO DE INICIO DE SESION
-        return self.username == str(user).strip().lower() and self.password == str(pwd).strip()#verifica las credenciales segun el app script
+    def verificar_credenciales(self, user, pwd): #COMPARA LOS DATOS INGRESADOS EN EL FORMULARIO DE INICIO DE SESION
+        return self.username == str(user).strip().lower() and self.password == str(pwd).strip() #verifica las credenciales segun el app script
 
 
 class GestorUsuarios:
     """Clase que administra la colección de usuarios conectada a Google Sheets y Apps Script."""
-    def __init__(self, url_usuarios_sheets=None, url_apps_script=None): #EL CONSTRUCTOR RECIBE LAS DIRECCIONES WEB 
+    def __init__(self, url_usuarios_sheets=None, url_apps_script=None):
         self.url_sheets = url_usuarios_sheets
         self.url_apps_script = url_apps_script
         self.usuarios = [] #INICIALIZA UNA LISTA VACIA DONDE SE ALMACENAN LOS OBJETOS
-        self.cargar_usuarios()  #LLAMA AUTOMATICAMENTE AL METODO CARGA APENAS SE CREA EL GESTOR
+        self.cargar_usuarios() #LLAMA AUTOMATICAMENTE AL METODO CARGA APENAS SE CREA EL GESTOR
 
-    def cargar_usuarios(self):  #ENCARGADO DE PROCESAR LOS USUARIOS DESDE LA NUBE
-        """Carga los usuarios desde la fuente web pública de Google Sheets."""
+    def cargar_usuarios(self): #ENCARGADO DE PROCESAR LOS USUARIOS DESDE LA NUBE
+        """Carga los usuarios desde Google Sheets manteniendo siempre al administrador por defecto."""
+        admin_por_defecto = Usuario(1, "UserAdmin", "adminVet1", "admin")
+        self.usuarios = [admin_por_defecto]
+        
         try:
-            if self.url_sheets:  #VERIFICA SI SE PROPORCIONO UNA DIRECCION WEB DE GOOGLE SHEETS
-                df_users = pd.read_csv(self.url_sheets)  #UTILIZA PANDAS PARA DESCARGAR EL ARCHIVO CSV PUBLICO Y CONVERTIRLO EN DATAFRAME
-                self.usuarios = []
-                for _, row in df_users.iterrows():  #RECORRE CADA FILA DE LA TABLA DE DATOS
-                    self.usuarios.append(
-                        Usuario(row['ID'], row['Usuario'], row['Clave'], row['Rol'])  #POR CADA FILA CREA UN OBJETO DE LA CLASE USUARIO PASANDOLE LOS DATOS DE LA COLUMNA
-                    )
+            if self.url_sheets:
+                df_users = pd.read_csv(self.url_sheets)
+                for _, row in df_users.iterrows():
+                    username_sheet = str(row['Usuario']).strip().lower()
+                    if username_sheet != "useradmin":
+                        self.usuarios.append(
+                            Usuario(row['ID'], row['Usuario'], row['Clave'], row['Rol'])
+                        )
             else:
-                raise Exception("Sin URL")  #SI NO HAY URL LANZA UN ERROR INTENCIONALMENTE PARA ACTIVAR EL RESPALDO
+                raise Exception("Sin URL")
         except Exception as e:
-            # Respaldo por defecto si falla la red
-            self.usuarios = [
-                Usuario(1, "UserAdmin", "adminVet1", "admin"),
-                Usuario(2, "Userprac", "practicante2026", "estudiante")
-            ]
+            practicante_respaldo = Usuario(2, "Userprac", "practicante2026", "estudiante")
+            if not any(u.username == "userprac" for u in self.usuarios):
+                self.usuarios.append(practicante_respaldo)
 
-    def autenticar(self, username, password):  #ENCARGADO DE VALIDAR LAS CREDENCIALES DE ACCESO
-        """Verifica las credenciales del usuario."""
-        for user_obj in self.usuarios:  #RECORRE LA LISTA DE LOS OBJETOS DE USUARIOS CARGADOS
-            if user_obj.verificar_credenciales(username, password):
-                return user_obj.role  #LLAMA AL METODO DE CLASE USUARIO PARA COMPROBAR SI COINCIDEN, SI ES CORRECTO DEVUELVE EL ROL DEL USUARIO 
-        return None  #SI TERMINA EL CICLO Y NINGUN USUARIO COINCIDE, DEVUELVE NADA INDICANDO QUE EL ACCESO ES DENEGADO
+    def autenticar(self, username, password):
+        """Verifica las credenciales recargando primero los datos para reflejar cambios en tiempo real."""
+        # Forzamos una recarga rápida de la base de datos para que detecte si borraron o agregaron usuarios en Sheets
+        self.cargar_usuarios()
+        
+        username_limpio = str(username).strip().lower()
+        password_limpio = str(password).strip()
+        
+        for user_obj in self.usuarios:
+            if user_obj.username == username_limpio and user_obj.password == password_limpio:
+                return user_obj.role
+        return None
 
-    def registrar_practicante(self, username, password): #METODO QUE PERMITE DAR DE ALTA A UN NUEVO ESTUDIANTE
-        """Registra un nuevo practicante enviándolo a Google Apps Script para que se guarde en el Sheet."""
-        username_limpio = str(username).strip().lower() #LIMPIA ESPACIOS Y PASA EL NOMBRE A MINUSCULAS
+    def registrar_practicante(self, username, password):
+        """Registra un nuevo practicante enviándolo a Google Apps Script y actualizando la memoria local."""
+        username_limpio = str(username).strip().lower()
         
         for user_obj in self.usuarios:
             if user_obj.username == username_limpio:
-                raise ErrorDatoInvalido("El nombre de usuario ya existe en el sistema.") #RECORRE LA LISTA DE USUARIOS Y SI ENCUENTRA UNO CON EL MISMO NOMBRE LANZA LA EXCEPCION PERSONALIZADA
+                raise ErrorDatoInvalido("El nombre de usuario ya existe en el sistema.")
         
         if not username or not password:
             raise ErrorDatoInvalido("El usuario y la contraseña no pueden estar vacíos.")
 
-        # Estructura de datos para el Apps Script
-        payload = {  #CREA UN DICCIONARIO EN FORMATO DE DATOS QUE CONTIENE LA ACCION, EL USUARIO, LA CONTRASEÑA Y EL ROL PARA ENVIARLO A APPS SCRIPT
+        payload = {
             "action": "registrar_usuario",
             "username": username_limpio,
             "password": str(password).strip(),
@@ -84,14 +91,14 @@ class GestorUsuarios:
         }
 
         try:
-            if self.url_apps_script:  #VERIFICA QUE LA DIRECCION WEB DEL APPS SCRIPT ESTE DEBIDAMENTE CONFIGURADA ANTES DE INTENTAR LA CONEXION 
-                # esto envia la petición POST al Apps Script
-                response = requests.post(self.url_apps_script, json=payload)  #UTILIZA LA LIBRERIA PARA ENVIAR UNA PETICION HTTP DE TIPO POST ENVIANDO EL PAYLOAD EMPAQUETADO COMO JSON
+            if self.url_apps_script:
+                response = requests.post(self.url_apps_script, json=payload)
                 resultado = response.json()
                 
-                if resultado.get("status") == "success":  #COMPRUEBA SI EL SERVIDOR CONFIRMO QUE EL REGISTRO SE REALIZO CORRECTAMENTE EN LA HOJA DE CALCULO
-                    # Recarga la lista desde Sheets para traer el nuevo usuario registrado
-                    self.cargar_usuarios()
+                if resultado.get("status") == "success":
+                    nuevo_id = len(self.usuarios) + 1
+                    nuevo_usuario = Usuario(nuevo_id, username_limpio, password, "estudiante")
+                    self.usuarios.append(nuevo_usuario)
                     return True
                 else:
                     raise Exception("Error en el servidor de Apps Script.")
