@@ -182,7 +182,7 @@ else:
                 st.plotly_chart(fig_est, use_container_width=True)
 
         elif opcion_menu == "📦 Inventario":
-            st.markdown("### 📦 Gestión de Stock - OASIS Pet Tracker")
+            st.markdown("### 📦 Gestión de Stock")
             busqueda_texto = st.text_input("🔍 Buscar producto por nombre:", placeholder="Escribe el nombre del producto...", key="main_search_v10")
             st.markdown("---")
             c1, c2, c3 = st.columns(3)
