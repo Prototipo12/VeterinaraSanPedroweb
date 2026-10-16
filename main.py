@@ -103,7 +103,6 @@ else:
         # LÓGICA DE CONTENIDO
         if opcion_menu == "📊 Resumen General":
             st.markdown("### 📊 Resumen General")
-            str.caption("🐾 Veterinaria San Pedro | Gestión y control de tu negocio")
             
             # Filtros Mes/Año
             anios = sorted(ventas_totales['Fecha'].dt.year.unique(), reverse=True)
